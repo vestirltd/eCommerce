@@ -18,6 +18,7 @@ builder.Services.AddTransient<IBillGenerate, BillGenerateService>();
 builder.Services.AddTransient<IViewSalesReport, ViewSalesReport>();
 builder.Services.AddTransient<IExportSalesReport, FileExportSalesReport>();
 builder.Services.AddTransient<IUpdateStockInterface, UpdateStockService>();
+builder.Services.AddTransient<ISendMail, SendMail>();
 // builder.Services.AddTransient<IUpdateStockInterface, UpdateStocksService>();
 
 var app = builder.Build();
