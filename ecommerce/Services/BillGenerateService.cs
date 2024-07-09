@@ -7,12 +7,16 @@ namespace ecommerce.Services
     {
         private readonly IDapperDBConnectInterface _Database;
         private readonly IGetStockInterface _stock;
-        public BillGenerateService(IDapperDBConnectInterface DapperDbConnect, IGetStockInterface stock)
+        private readonly string _adminMailNotificationMail;
+        private readonly ISendMail _mail;
+        public BillGenerateService(IDapperDBConnectInterface DapperDbConnect, IGetStockInterface stock, IConfiguration config, ISendMail mail)
         {
             _Database = DapperDbConnect;
             _stock = stock;
+            _adminMailNotificationMail = config.GetConnectionString("AdminMailId");
+            _mail = mail;
         }
-        public string generateBill(List<GenerateBill> generateBills, string name)
+        public string generateBill(List<GenerateBill> generateBills, string name, string customerMailId)
         {
             Bills bill = new Bills();
             List<updateStock> QtyUpdate = new List<updateStock>();
@@ -21,6 +25,8 @@ namespace ecommerce.Services
                 Stock stock = _stock.GetParticularStock(generateBills[i].product);
                 if(stock.stock < generateBills[i].quantity)
                 {
+                    string outOfStockMessage = generateBills[i].product + " - Out Of Stock";
+                    _mail.sendingMail(_adminMailNotificationMail,"Out Of Stock Alert !!",outOfStockMessage);
                     return generateBills[i].product+" - Out Of Stock";  // Todo add mail notification
                 }
                 else
@@ -44,6 +50,7 @@ namespace ecommerce.Services
             bill.GrossTotal = bill.NetTotal+bill.VAT;
             string BillGenerateQuery = "INSERT INTO [sampleEcommerce].[dbo].[BillHistory] ([InvoiceDate],[CustomerName],[Quantity],[Product],[Price],[NetTotal],[VAT],[GrossTotal]) VALUES ('"+bill.InvoiceDate+"', '"+bill.CustomerName+"', '"+bill.quantity+"', '"+bill.product+"', '"+bill.price+"', "+bill.NetTotal+" , "+bill.VAT+", "+bill.GrossTotal+")";
             string response = _Database.PostDBQuery(BillGenerateQuery);
+            _mail.sendingMail(customerMailId, "newBill", "Bill Details will be added here \n Thanks, \n ShopOwner");
             return "Bill Generated";
         }
     }

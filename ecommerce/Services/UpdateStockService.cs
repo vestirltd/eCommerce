@@ -19,7 +19,9 @@ namespace ecommerce.Services
             {
                 if(stockCheck.product == ProductName)
                 {
-                    string query = "UPDATE StockMaintain SET [Stock] = "+quantity+" WHERE [Product] = '"+ProductName+"'";
+                    int qty = stockCheck.stock + quantity;
+                    string query = "UPDATE StockMaintain SET [Stock] = "+qty+" WHERE [Product] = '"+ProductName+"'";
+                    Console.WriteLine(query);
                     _dapperDSConnectioninterface.PostDBQuery(query);
                     return "Stock Updated";
                 }

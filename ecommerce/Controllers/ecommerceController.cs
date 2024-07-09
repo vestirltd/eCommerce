@@ -19,7 +19,8 @@ namespace ecommerce.Controllers
         private readonly IExportSalesReport _exportSalesReport;
         // private readonly IUpdateStockInterface _updateStock;
         private readonly IUpdateStockInterface _updateStk;
-        public ecommerceController(IDapperDBConnectInterface IDapperDBConnect,IGetStockInterface getStockInterface,IBillGenerate billGenerate, IViewSalesReport viewSalesReport,IExportSalesReport exportSalesReport, IUpdateStockInterface stockInterface)
+        private readonly ISendMail _mail;
+        public ecommerceController(IDapperDBConnectInterface IDapperDBConnect,IGetStockInterface getStockInterface,IBillGenerate billGenerate, IViewSalesReport viewSalesReport,IExportSalesReport exportSalesReport, IUpdateStockInterface stockInterface, ISendMail mail)
         {
             _IDapperDBConnect = IDapperDBConnect;
             _IgetStock = getStockInterface;
@@ -27,6 +28,7 @@ namespace ecommerce.Controllers
             _viewSalesReport=viewSalesReport;
             _exportSalesReport=exportSalesReport;
             _updateStk = stockInterface;
+            _mail = mail;
         }
 
         [HttpGet()]
@@ -38,9 +40,9 @@ namespace ecommerce.Controllers
         }
         [HttpPost()]
         [Route("SalesMan/GenerateBill")]
-        public string GenerateBill([FromBody] List<GenerateBill> generateBill, [FromHeader] string name)
+        public string GenerateBill([FromBody] List<GenerateBill> generateBill, [FromHeader] string name,[FromHeader] string enterYourEmail)
         {
-            string s = _billGenerate.generateBill(generateBill, name);
+            string s = _billGenerate.generateBill(generateBill, name, enterYourEmail);
             return s;
         }
         [HttpGet()]
@@ -63,6 +65,14 @@ namespace ecommerce.Controllers
         {
             string updatestk = _updateStk.UpdateStockFunction(ProductName,Quantity);
             return updatestk;
+        }
+
+        [HttpPost()]
+        [Route("Admin/SendMail")]
+        public string sendingMail()
+        {
+            _mail.sendingMail("", "", "");
+            return "hi";
         }
     }
 }
