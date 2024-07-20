@@ -2,7 +2,7 @@ namespace ecommerce.Models
 {
     public class Bills
     {
-        public int InvoiceNumber { get; set; }
+        public string InvoiceNumber { get; set; }
         public string? InvoiceDate { get; set; }
         public string? CustomerName { get; set; }
         public string? product { get; set; }

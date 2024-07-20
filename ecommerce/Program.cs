@@ -3,6 +3,7 @@
 using ecommerce.Interfaces;
 using ecommerce.Models;
 using ecommerce.Services;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +20,16 @@ builder.Services.AddTransient<IViewSalesReport, ViewSalesReport>();
 builder.Services.AddTransient<IExportSalesReport, FileExportSalesReport>();
 builder.Services.AddTransient<IUpdateStockInterface, UpdateStockService>();
 builder.Services.AddTransient<ISendMail, SendMail>();
+builder.Services.AddTransient<IGetInvoiceNumber, GetInvoiceNumber>();
 // builder.Services.AddTransient<IUpdateStockInterface, UpdateStocksService>();
+// Reddis connection
+var redisConnectionString = builder.Configuration.GetSection("Redis:ConnectionString").Value;
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var configuration = ConfigurationOptions.Parse(redisConnectionString, true);
+    configuration.AbortOnConnectFail = false;
+    return ConnectionMultiplexer.Connect(configuration);
+});
 
 var app = builder.Build();
 
@@ -39,3 +49,6 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.Run();
 
+// Docker docker exec -it redis redis-cli
+// FLUSHALL
+//dotnet add package StackExchange.Redis

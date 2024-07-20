@@ -9,14 +9,16 @@ namespace ecommerce.Services
         private readonly IGetStockInterface _stock;
         private readonly string _adminMailNotificationMail;
         private readonly ISendMail _mail;
-        public BillGenerateService(IDapperDBConnectInterface DapperDbConnect, IGetStockInterface stock, IConfiguration config, ISendMail mail)
+        private readonly IGetInvoiceNumber _invoiceNo;
+        public BillGenerateService(IDapperDBConnectInterface DapperDbConnect, IGetStockInterface stock, IConfiguration config, ISendMail mail, IGetInvoiceNumber invoiceNo)
         {
             _Database = DapperDbConnect;
             _stock = stock;
             _adminMailNotificationMail = config.GetConnectionString("AdminMailId");
             _mail = mail;
+            _invoiceNo = invoiceNo;
         }
-        public string generateBill(List<GenerateBill> generateBills, string name, string customerMailId)
+        public async Task<string> generateBill(List<GenerateBill> generateBills, string name, string customerMailId)
         {
             Bills bill = new Bills();
             List<updateStock> QtyUpdate = new List<updateStock>();
@@ -44,13 +46,24 @@ namespace ecommerce.Services
                 string stockUpdateQuery = "UPDATE StockMaintain SET [Stock] = "+a.quantity+" where [Product] = '"+a.product+"'";
                 string logmessage = _Database.PostDBQuery(stockUpdateQuery);
             }
+            bill.InvoiceNumber = await _invoiceNo.GetNextInvoiceNumber();
             bill.InvoiceDate = DateTime.Now.ToString("dd-MMM-yyyy");
             bill.CustomerName = name;
             bill.VAT = bill.NetTotal * 0.2;
             bill.GrossTotal = bill.NetTotal+bill.VAT;
-            string BillGenerateQuery = "INSERT INTO [sampleEcommerce].[dbo].[BillHistory] ([InvoiceDate],[CustomerName],[Quantity],[Product],[Price],[NetTotal],[VAT],[GrossTotal]) VALUES ('"+bill.InvoiceDate+"', '"+bill.CustomerName+"', '"+bill.quantity+"', '"+bill.product+"', '"+bill.price+"', "+bill.NetTotal+" , "+bill.VAT+", "+bill.GrossTotal+")";
+            string BillGenerateQuery = "INSERT INTO [sampleEcommerce].[dbo].[BillsHistory] ([InvoiceNumber],[InvoiceDate],[CustomerName],[Quantity],[Product],[Price],[NetTotal],[VAT],[GrossTotal]) VALUES ('"+bill.InvoiceNumber+"', '"+bill.InvoiceDate+"', '"+bill.CustomerName+"', '"+bill.quantity+"', '"+bill.product+"', '"+bill.price+"', "+bill.NetTotal+" , "+bill.VAT+", "+bill.GrossTotal+")";
+            System.Console.WriteLine(BillGenerateQuery+"==========");
             string response = _Database.PostDBQuery(BillGenerateQuery);
-            _mail.sendingMail(customerMailId, "newBill", "Bill Details will be added here \n Thanks, \n ShopOwner");
+            _mail.sendingMail(customerMailId, "VSL Bill", "Hi "+bill.CustomerName+",\nPlease find the bill details\n\nInvoice No : "+bill.InvoiceNumber
+                                                        +"\n Invoice Date: "+bill.InvoiceDate
+                                                        +"\nProducts: "+bill.product
+                                                        +"\n Quantity : "+bill.quantity
+                                                        +"\nPrice: "+bill.price
+                                                        +"\nNetTotal : "+bill.NetTotal
+                                                        +"\nVAT : "+bill.VAT
+                                                        +"\nGross Total : "
+                                                        +bill.GrossTotal
+                                                        +" \n\n Thanks, \n VSLGroups");
             return "Bill Generated";
         }
     }
