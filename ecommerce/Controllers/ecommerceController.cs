@@ -1,10 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
 using ecommerce.Interfaces;
 using ecommerce.Models;
 using Microsoft.AspNetCore.Mvc;
+using StackExchange.Redis;
 
 namespace ecommerce.Controllers
 {
@@ -19,8 +17,12 @@ namespace ecommerce.Controllers
         private readonly IExportSalesReport _exportSalesReport;
         // private readonly IUpdateStockInterface _updateStock;
         private readonly IUpdateStockInterface _updateStk;
-        private readonly ISendMail _mail;
-        public ecommerceController(IDapperDBConnectInterface IDapperDBConnect,IGetStockInterface getStockInterface,IBillGenerate billGenerate, IViewSalesReport viewSalesReport,IExportSalesReport exportSalesReport, IUpdateStockInterface stockInterface, ISendMail mail)
+        private readonly IConnectionMultiplexer _redis;
+        private readonly IDatabase _db;
+        private readonly IGetInvoiceNumber _getInvoiceNo;
+        private const string InvoiceKey = "invoiceNumber";
+
+        public ecommerceController(IDapperDBConnectInterface IDapperDBConnect,IGetStockInterface getStockInterface,IBillGenerate billGenerate, IViewSalesReport viewSalesReport,IExportSalesReport exportSalesReport, IUpdateStockInterface stockInterface,IConnectionMultiplexer redis, IGetInvoiceNumber invoiNo)
         {
             _IDapperDBConnect = IDapperDBConnect;
             _IgetStock = getStockInterface;
@@ -28,7 +30,9 @@ namespace ecommerce.Controllers
             _viewSalesReport=viewSalesReport;
             _exportSalesReport=exportSalesReport;
             _updateStk = stockInterface;
-            _mail = mail;
+            _redis = redis;
+            _db = _redis.GetDatabase();
+            _getInvoiceNo = invoiNo;
         }
 
         [HttpGet()]
@@ -40,9 +44,9 @@ namespace ecommerce.Controllers
         }
         [HttpPost()]
         [Route("SalesMan/GenerateBill")]
-        public string GenerateBill([FromBody] List<GenerateBill> generateBill, [FromHeader] string name,[FromHeader] string enterYourEmail)
+        public async Task<string> GenerateBill([FromBody] List<GenerateBill> generateBill, [FromHeader] string name,[FromHeader] string enterYourEmail)
         {
-            string s = _billGenerate.generateBill(generateBill, name, enterYourEmail);
+            string s =await _billGenerate.generateBill(generateBill, name, enterYourEmail);
             return s;
         }
         [HttpGet()]
@@ -66,13 +70,28 @@ namespace ecommerce.Controllers
             string updatestk = _updateStk.UpdateStockFunction(ProductName,Quantity);
             return updatestk;
         }
-
-        [HttpPost()]
-        [Route("Admin/SendMail")]
-        public string sendingMail()
+        [HttpPost("Admin/SetInitialInvoiceNumber")]
+        public async Task<IActionResult> SetInitialInvoiceNumber(string initialValue)
         {
-            _mail.sendingMail("", "", "");
-            return "hi";
+            bool isSet = await _db.StringSetAsync(InvoiceKey, initialValue, when: When.NotExists);
+            if (isSet)
+            {
+                return Ok(new { Message = "Initial value set successfully", InitialValue = initialValue });
+            }
+            else
+            {
+                return BadRequest(new { Message = "Initial value already exists" });
+            }
         }
+        // To understand how Redis works
+        // [HttpGet("Admin/CheckInvoiceNumber")]
+        // public async Task<string> GetNextInvoiceNumbers()
+        // {
+        //     // Increment the invoice number in Redis
+        //     // long nextInvoiceNumber = await _db.StringIncrementAsync(InvoiceKey);
+        //     string INo = await _getInvoiceNo.GetNextInvoiceNumber();
+        //     System.Console.WriteLine(INo);
+        //     return INo;
+        // }
     }
 }

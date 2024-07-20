@@ -4,6 +4,6 @@ namespace ecommerce.Interfaces
 {
     public interface IBillGenerate
     {
-        public string generateBill(List<GenerateBill> generateBills,string name, string customerMailId);
+        public Task<string> generateBill(List<GenerateBill> generateBills,string name, string customerMailId);
     }
 }

@@ -14,7 +14,7 @@ namespace ecommerce.Services
         public List<Bills> ViewsalesReport()
         {
             System.Console.WriteLine("Hi i am inside");
-            string query = "select * from BillHistory";
+            string query = "select * from BillsHistory";
             using(var connection = this._Database.CreateConnection())
             {
                 List<Bills> results = connection.Query<Bills>(query).ToList();
